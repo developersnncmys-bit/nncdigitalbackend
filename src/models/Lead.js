@@ -28,6 +28,7 @@ const leadSchema = new mongoose.Schema(
       default: 'new',
     },
     followUpDate: { type: String, default: '' },
+    assignedTo: { type: String, default: '' },
     notes: { type: [noteSchema], default: [] },
     // where the lead came from (website landing page, or "manual")
     source: { type: String, default: '' },

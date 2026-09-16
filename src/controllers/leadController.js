@@ -1,8 +1,23 @@
 const Lead = require('../models/Lead');
 const asyncHandler = require('../utils/asyncHandler');
 
+// Auto-move to "overdue" any Today's Follow-up / Follow-up lead whose follow-up
+// date is now in the past (i.e. the follow-up wasn't done in time). Runs before
+// every list/stats read so the pipeline stays accurate without a cron job.
+async function promoteOverdue() {
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  await Lead.updateMany(
+    {
+      status: { $in: ['today', 'followup'] },
+      followUpDate: { $gt: '', $lt: today }, // non-empty and strictly before today
+    },
+    { $set: { status: 'overdue' } }
+  );
+}
+
 // GET /api/leads   (optional ?status=)
 exports.list = asyncHandler(async (req, res) => {
+  await promoteOverdue();
   const filter = {};
   if (req.query.status) filter.status = req.query.status;
   const leads = await Lead.find(filter).sort({ createdAt: -1 });
@@ -11,6 +26,7 @@ exports.list = asyncHandler(async (req, res) => {
 
 // GET /api/leads/stats
 exports.stats = asyncHandler(async (req, res) => {
+  await promoteOverdue();
   const rows = await Lead.aggregate([
     { $group: { _id: '$status', n: { $sum: 1 } } },
   ]);
