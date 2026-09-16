@@ -7,22 +7,13 @@ const { notFound, errorHandler } = require('./middleware/errorHandler');
 const app = express();
 
 // ── CORS ──────────────────────────────────────────────────────────────
-// Allow the website + admin panel origins from CORS_ORIGINS. Requests with no
-// Origin (curl, server-to-server, health checks) are allowed too.
-const allowed = (process.env.CORS_ORIGINS || '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-app.use(
-  cors({
-    origin(origin, cb) {
-      if (!origin || allowed.length === 0 || allowed.includes(origin)) return cb(null, true);
-      return cb(new Error(`Origin ${origin} not allowed by CORS`));
-    },
-    credentials: true,
-  })
-);
+// Reflect the request origin so the API is reachable from the website, the
+// admin panel (any Vercel/preview URL), and localhost. Auth is by Bearer token
+// (not cookies), so reflecting all origins is safe here and avoids brittle
+// allowlist maintenance. `origin: true` echoes the caller's Origin header.
+app.use(cors({ origin: true, credentials: true }));
+// Make sure preflight (OPTIONS) requests are answered for every route.
+app.options('*', cors({ origin: true, credentials: true }));
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
