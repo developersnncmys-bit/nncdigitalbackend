@@ -37,7 +37,8 @@ exports.createWebsiteEnquiry = asyncHandler(async (req, res) => {
     teamSize: teamSize || teamsize || '',
     status: 'new',
     leadType: 'website',
-    source: landingPage || site || 'website',
+    // Leads captured from any website form are tagged simply as "Website".
+    source: 'Website',
     date: new Date().toISOString().slice(0, 10),
     notes,
   });

@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const routes = require('./routes');
 const connectDB = require('./config/db');
+const seedAdmin = require('./seed');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -22,10 +23,18 @@ app.get('/', (req, res) => res.json({ name: 'NNC Digital API', status: 'running'
 
 // Ensure the DB is connected before handling any data route (lazy + cached).
 // Health check is exempt so it works even while the DB is unreachable.
+let seedTried = false;
 app.use('/api', async (req, res, next) => {
   if (req.path === '/health') return next();
   try {
     await connectDB();
+    // Serverless never runs server.js's boot seed, so ensure the default admin
+    // exists on the first request per warm instance (idempotent — no-op if any
+    // user already exists).
+    if (!seedTried) {
+      seedTried = true;
+      await seedAdmin().catch(() => {});
+    }
     next();
   } catch (err) {
     res.status(503).json({
